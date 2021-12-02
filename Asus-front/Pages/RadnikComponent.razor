@@ -1,0 +1,221 @@
+﻿@page "/"
+@inject iTrzisteUseCase  trzisteUseCase
+@inject iRadnikUseCase RadnikUseCase 
+@inject IJSRuntime JSRuntime
+
+
+<h3 style="font-family: 'Comic Sans MS'; font-weight: bold">Forma za unos radnika</h3>
+
+
+<div class="row align-items-center" style="margin-left: 1rem; margin-right: 2rem; margin-top: 2rem">
+    <div class="col-5">
+        <div class="mb-3">
+            <label for="formGroupExampleInput" class="form-label">Šifra radnika:</label>
+            <input type="number" class="form-control" id="formGroupExampleInput" disabled="@isUpdate" @bind-value="SifraRadnika">
+        </div>
+        <div class="mb-3">
+            <label for="formGroupExampleInput2" class="form-label">Email:</label>
+            <input type="text" class="form-control" id="formGroupExampleInput2" @bind-value="Email">
+        </div>
+       
+    </div>
+    <div class="col">
+        <div class="d-grid gap-2 col-6 mx-auto">
+            <button class="btn btn-primary" type="button" style="min-width: 6rem" @onclick="PronadjiRadnika">Pronadji</button>
+
+        </div>
+        <div class="d-grid gap-2 col-6 mx-auto">
+            <button class="btn btn-primary" type="button" style="min-width: 6rem" disabled="@(!isUpdate)" @onclick="ObrisiRadnika">Obriši</button>
+
+        </div>
+    </div>
+    <div class="col-5">
+        <div class="mb-3">
+            <label for="formGroupExampleInput" class="form-label">Ime i prezime:</label>
+            <input type="text" class="form-control" id="formGroupExampleInput" @bind-value="ImePrezimeRadnika">
+        </div>
+        <div class="mb-3">
+            <label for="formGroupExampleInput" class="form-label">Tržište:</label>
+            <select class="form-control" aria-label=".form-select-lg example" @onchange="setTrziste">
+                @if (isUpdate && TrzisteID!=0)
+                {
+                    <option selected>@trzista.FirstOrDefault(tr => tr.SifraTrzista == TrzisteID).Naziv</option>
+                }
+                else
+                {
+                    <option selected>Izaberi trziste</option>
+                }
+
+                @if (trzista != null)
+                {
+                    @foreach (Trziste t in trzista)
+                    {
+                        <option value=@t.SifraTrzista>@t.Naziv</option>
+                    }
+                }
+            </select>
+        </div>
+        
+    </div>
+</div>
+
+<div class="row justify-content-around">
+    <div class="col-4">
+        <button type="button" class="btn btn-primary" @onclick="PonistiUnos">Poništi unos</button>
+    </div>
+    <div class="col-4">
+        <button type="button" class="btn btn-primary" @onclick="KreirajRadnika">Potvrdi unos</button>
+    </div>
+</div>
+
+
+
+@code { 
+
+    private List<Trziste> trzista;
+    private int SifraRadnika;
+    private string Email;
+    private string ImePrezimeRadnika;
+    private int TrzisteID=0;
+    private bool uspesno;
+    private bool isUpdate=false;
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        try
+        {
+            trzista = trzisteUseCase.vratiTrzista();
+        }
+        catch(Exception e)
+        {
+            JSRuntime.InvokeVoidAsync("alertServer");
+        }
+
+
+    }
+
+
+    private void PonistiUnos()
+    {
+        SifraRadnika = 0;
+        Email = null;
+        ImePrezimeRadnika = null;
+        isUpdate = false;
+    }
+    private void KreirajRadnika()
+    {
+        try
+        {
+            if (!Validate())
+            {
+                JSRuntime.InvokeVoidAsync("alertRadnikValidate");
+
+            }
+            else
+            {
+                Radnik Radnik = new Radnik();
+                Radnik.SifraRadnika = SifraRadnika;
+                Radnik.Email = Email;
+                Radnik.ImePrezime = ImePrezimeRadnika;
+                Radnik.TrzisteID = TrzisteID;
+                if (isUpdate)
+                {
+                    if (RadnikUseCase.izmeniRadnik(Radnik, SifraRadnika))
+                    {
+                        JSRuntime.InvokeVoidAsync("alertRadnikUpdateSuccess");
+                        PonistiUnos();
+                    }
+                    else
+                    {
+                        JSRuntime.InvokeVoidAsync("alertServer");
+
+                    }
+                }
+                else
+                {
+
+
+
+                    if (RadnikUseCase.kreirajRadnik(Radnik))
+                    {
+                        JSRuntime.InvokeVoidAsync("alertRadnikSuccess");
+                        PonistiUnos();
+                    }
+                    else
+                    {
+                        JSRuntime.InvokeVoidAsync("alertExist");
+                    }
+                }
+            }
+        }
+        catch(Exception e)
+        {
+            JSRuntime.InvokeVoidAsync("alertServer");
+        }
+    }
+
+    private void setTrziste(ChangeEventArgs e)
+    {
+        int.TryParse(e.Value.ToString(), out int SifraTrzista);
+        TrzisteID = SifraTrzista;
+    }
+
+    private void PronadjiRadnika()
+    {
+        try
+        {
+            Radnik Radnik = RadnikUseCase.PronadjiRadnika(SifraRadnika);
+            if (Radnik != null)
+            {
+                SifraRadnika = Radnik.SifraRadnika;
+                Email = Radnik.Email;
+                ImePrezimeRadnika = Radnik.ImePrezime;
+                TrzisteID = Radnik.TrzisteID;
+                isUpdate = true;
+            }
+            else
+            {
+                JSRuntime.InvokeVoidAsync("alertRadnikNotExist");
+
+            }
+        }
+        catch(Exception e)
+
+        {
+            JSRuntime.InvokeVoidAsync("alertServer");
+        }
+    }
+
+    private void ObrisiRadnika()
+    {
+        try
+        {
+            if (RadnikUseCase.obrisiRadnika(SifraRadnika))
+            {
+                JSRuntime.InvokeVoidAsync("alertRadnikDeleteSuccess");
+                PonistiUnos();
+
+            }
+            else
+            {
+                JSRuntime.InvokeVoidAsync("alertServer");
+            }
+        }
+        catch(Exception e)
+        {
+            JSRuntime.InvokeVoidAsync("alertServer");
+
+        }
+    }
+
+    private bool Validate()
+    {
+        if (SifraRadnika == 0 || ImePrezimeRadnika == "" ||
+            ImePrezimeRadnika.Length < 3 || TrzisteID == 0 || Email == "" || !Email.Contains('@'))
+        {
+            return false;
+        }
+        else
+            return true;
+    }
+}

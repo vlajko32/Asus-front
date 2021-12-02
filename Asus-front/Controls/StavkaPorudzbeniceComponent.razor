@@ -1,0 +1,34 @@
+﻿@if (stavkaPorudzbenice != null)
+{
+
+    <td>@stavkaPorudzbenice.rbStavke</td>
+    <td>@stavkaPorudzbenice.SifraProizvoda</td>
+    <td>@stavkaPorudzbenice.NazivModela</td>
+    <td>@stavkaPorudzbenice.kolicina</td>
+    <td><button type="button" class="btn btn-info btn-sm" @onclick="PromeniStavku">Promeni</button></td>
+    <td><button type="button" class="btn btn-danger btn-sm" @onclick="ObrisiStavku">Obrisi</button></td>
+
+
+
+
+}
+
+@code {
+    [Parameter]
+    public StavkaPorudzbenice stavkaPorudzbenice { get; set; }
+
+    [Parameter]
+    public EventCallback<StavkaPorudzbenice> Promeni { get; set; }
+    [Parameter]
+    public EventCallback<StavkaPorudzbenice> Obrisi { get; set; }
+
+    private void PromeniStavku()
+    {
+        Promeni.InvokeAsync(stavkaPorudzbenice);
+    }
+
+    private void ObrisiStavku()
+    {
+        Obrisi.InvokeAsync(stavkaPorudzbenice);
+    }
+}
